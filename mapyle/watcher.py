@@ -1,30 +1,49 @@
 """Methods and classes for watching files for
 changes using watchdog
 """
-import sys
-import time
-import logging
 from watchdog.observers import Observer
-from watchdog.events import LoggingEventHandler
-import watchdog
+from watchdog.events import FileModifiedEvent
+from watchdog.events import FileCreatedEvent
+from watchdog.events import PatternMatchingEventHandler
 
-def event_response(event):
-    print('hellaw')
+class SourceFileHandler(PatternMatchingEventHandler):
+    def __super__(self, patterns=None, ignore_patterns=None, ignore_directories=False):
+        """ TODO: pass an object that stores commands for each event
+        call those commands on each event method
+        """
+        super.patterns = patterns
+        super.ignore_directories = ignore_directories
+        super.case_sensitive = True
+        super.ignore_patterns = ignore_patterns
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    path = sys.argv[1] if len(sys.argv) > 1 else '.'
-    event_handler = watchdog.events.PatternMatchingEventHandler(patterns=[".*.jpg"], ignore_patterns=[], ignore_directories=True)
-    event_handler.on_any_event = event_response
-    observer = Observer()
-    observer.schedule(event_handler, path, recursive=True)
-    observer.start()
+    def on_created(self, event):
+        print('created')
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
+    def on_modified(self, event):
+        print('modified')
 
+    def on_deleted(self, event):
+        print('on_deleted')
 
+    def on_moved(self, event):
+        print('on_moved')
+
+class FileWatcher():
+    def __init__(self, path, filetypes, on_created, on_modified):
+        self.path = path
+        self.filetypes = filetypes
+        self.observer = Observer()
+        self.on_created = on_created
+        self.on_modified = on_modified
+
+    def start(self):
+        event_handler = SourceFileHandler(patterns=self.filetypes, ignore_patterns=[], ignore_directories=True)
+
+        # There are also 'on_deleted' and 'on_moved'
+
+        self.observer.schedule(event_handler, self.path, recursive=True)
+        self.observer.start()
+
+    def stop(self):
+        self.observer.stop()
+        self.observer.join()
